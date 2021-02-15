@@ -1,0 +1,48 @@
+﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+		<PropertyGroup>
+			<ProjectGuid>{C71E6FE7-B2C3-4AF3-B6C1-E5F5E66E2F22}</ProjectGuid>
+		</PropertyGroup>
+		<ItemGroup>
+			<Projects Include="GWMultiLauncher.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="TestForm\TestFunc.dproj">
+				<Dependencies/>
+			</Projects>
+		</ItemGroup>
+		<ProjectExtensions>
+			<Borland.Personality>Default.Personality.12</Borland.Personality>
+			<Borland.ProjectType/>
+			<BorlandProject>
+				<Default.Personality/>
+			</BorlandProject>
+		</ProjectExtensions>
+		<Target Name="GWMultiLauncher">
+			<MSBuild Projects="GWMultiLauncher.dproj"/>
+		</Target>
+		<Target Name="GWMultiLauncher:Clean">
+			<MSBuild Targets="Clean" Projects="GWMultiLauncher.dproj"/>
+		</Target>
+		<Target Name="GWMultiLauncher:Make">
+			<MSBuild Targets="Make" Projects="GWMultiLauncher.dproj"/>
+		</Target>
+		<Target Name="TestFunc">
+			<MSBuild Projects="TestForm\TestFunc.dproj"/>
+		</Target>
+		<Target Name="TestFunc:Clean">
+			<MSBuild Targets="Clean" Projects="TestForm\TestFunc.dproj"/>
+		</Target>
+		<Target Name="TestFunc:Make">
+			<MSBuild Targets="Make" Projects="TestForm\TestFunc.dproj"/>
+		</Target>
+		<Target Name="Build">
+			<CallTarget Targets="GWMultiLauncher;TestFunc"/>
+		</Target>
+		<Target Name="Clean">
+			<CallTarget Targets="GWMultiLauncher:Clean;TestFunc:Clean"/>
+		</Target>
+		<Target Name="Make">
+			<CallTarget Targets="GWMultiLauncher:Make;TestFunc:Make"/>
+		</Target>
+		<Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+	</Project>
