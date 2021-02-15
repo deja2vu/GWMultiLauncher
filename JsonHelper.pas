@@ -122,7 +122,7 @@ begin
       begin
       if  c.Items[I].Typ = jdtObject then
           begin
-            if SameText(c.Items[I].ObjectValue.S['character'],key) then
+            if SameText(c.Items[I].ObjectValue.S['email'],key) then
             begin
               C.Delete(I);
               Break;
