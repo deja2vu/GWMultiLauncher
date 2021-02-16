@@ -14,8 +14,8 @@ object TestForm: TTestForm
   PixelsPerInch = 96
   TextHeight = 13
   object Button1: TButton
-    Left = 216
-    Top = 152
+    Left = 120
+    Top = 80
     Width = 75
     Height = 25
     Caption = 'Test'
@@ -35,5 +35,13 @@ object TestForm: TTestForm
     Width = 121
     Height = 21
     TabOrder = 2
+  end
+  object Button2: TButton
+    Left = 272
+    Top = 80
+    Width = 75
+    Height = 25
+    Caption = 'KillProcess'
+    TabOrder = 3
   end
 end

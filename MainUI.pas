@@ -263,15 +263,12 @@ end;
 procedure TMainForm.ListView1DblClick(Sender: TObject);
 var
   info: AccountInfo;
-  action: TDWData;
 begin
   mutex.Enter;
   try
     if DataWalker.InitJob(Self.ListView1.Selected.Caption, info) then
     begin
-      action.Kind := Word(UpdateStatus);
-      action.value := Word(InQueue);
-      UIMessage.SendString(Self.ListView1.Selected.Caption, action);
+      UIMessage.Update(Self.ListView1.Selected.Caption, InQueue);
     end;
   finally
     mutex.Leave;
@@ -375,7 +372,6 @@ var
   path: WideString;
   args: WideString;
   I: Cardinal;
-  action: TDWData;
 begin
   if Self.ListView1.Items.count = 0 then
     Exit;
@@ -385,9 +381,7 @@ begin
     begin
       if DataWalker.InitJob(Self.ListView1.Items.Item[I].Caption, info) then
       begin
-        action.Kind := Word(UpdateStatus);
-        action.value := Word(InQueue);
-        UIMessage.SendString(Self.ListView1.Items.Item[I].Caption, action);
+        UIMessage.Update(Self.ListView1.Items.Item[I].Caption, InQueue);
       end
       else
         Break;
@@ -410,9 +404,7 @@ begin
   begin
     if DataWalker.InitJob(Self.ListView1.Items.Item[I].Caption, info) then
     begin
-      action.Kind := Word(UpdateStatus);
-      action.value := Word(InQueue);
-      UIMessage.SendString(Self.ListView1.Items.Item[I].Caption, action);
+      UIMessage.Update(Self.ListView1.Items.Item[I].Caption, InQueue);
     end
     else
       Break;
@@ -588,7 +580,6 @@ var
   IsJobHung: LongBool;
   deadLock: Cardinal;
   isTimeOut: LongBool;
-  action: TDWData;
   GwMainHandle: Cardinal;
 begin
 
@@ -617,9 +608,7 @@ begin
             DataWalker.Tasks.TrimExcess;
             info.status := Launching;
             dataRecords.AddOrSetValue(info.email, info);
-            action.Kind := Word(UpdateStatus);
-            action.value := Word(Launching);
-            UIMessage.SendString(dataRecords[info.email].ton, action);
+            UIMessage.Update(dataRecords[info.email].ton, Launching);
             IsJobHung := True;
             mutex.Leave;
           end;
@@ -644,11 +633,9 @@ begin
           if not MyLaunchClient(path, args, info.datPath, True, info.ELEVATED)
             then
           begin
-            action.Kind := Word(UpdateStatus);
-            action.value := Word(Login_Launch_Failure);
             info.status := InError;
             dataRecords.AddOrSetValue(info.email, info);
-            UIMessage.SendString(dataRecords[info.email].ton, action);
+            UIMessage.Update(dataRecords[info.email].ton, InError);
             launchDelayReSet;
             IsJobHung := False;
             Continue;
@@ -688,11 +675,9 @@ begin
              until GwMainHandle <> 0;
             if GwMainHandle = 0 then
             begin
-              action.Kind := Word(UpdateStatus);
-              action.value := Word(Login_Launch_Failure2);
               info.status := InError;
               dataRecords.AddOrSetValue(info.email, info);
-              UIMessage.SendString(dataRecords[info.email].ton, action);
+              UIMessage.Update(dataRecords[info.email].ton, InError);
               launchDelayReSet;
               IsJobHung := False;
               Continue;
@@ -716,28 +701,22 @@ begin
             until (GwMemoryHelper.getCharName(CurrPid) <> '') and GwMemoryHelper.IsInGame(CurrPid);
             if isTimeOut then
             begin
-              action.Kind := Word(UpdateStatus);
-              action.value := Word(InError);
               info.status := InError;
               dataRecords.AddOrSetValue(info.email, info);
-              UIMessage.SendString(dataRecords[info.email].ton, action);
+              UIMessage.Update(dataRecords[info.email].ton, InError);
             end
             else
             begin
-              action.Kind := Word(UpdateStatus);
-              action.value := Word(Runnning);
               info.status := Runnning;
               dataRecords.AddOrSetValue(info.email, info);
-              UIMessage.SendString(dataRecords[info.email].ton, action);
+              UIMessage.Update(dataRecords[info.email].ton, Runnning);
             end;
           end
           else
           begin
-            action.Kind := Word(UpdateStatus);
-            action.value := Word(Login_MainWindows_Failed);
             info.status := InError;
             dataRecords.AddOrSetValue(info.email, info);
-            UIMessage.SendString(dataRecords[info.email].ton, action);
+            UIMessage.Update(dataRecords[info.email].ton, InError);
           end;
           launchDelayReSet;
           IsJobHung := False;
