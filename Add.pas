@@ -178,7 +178,11 @@ begin
         Local_info.datPath:=Self.CheckBox_datPatch.Checked;
         Local_info.elevated:=Self.CheckBox_ELEVATED.Checked;
         Local_info.mods:=nil;
-        if not DataWalker.Add(Local_info) then Exit;
+        Local_info.status:=Ready;
+        if not DataWalker.Add(Local_info) then
+        begin
+         Exit;
+        end;
       Self.Key:= Edit_tonName.Text;
       ModalResult:=mrOk;
 
@@ -243,6 +247,7 @@ begin
      MessageBox(0, PWideChar('角色:' + Edit_tonName.Text + ',已经存在') , '出错了~!', MB_ICONEXCLAMATION or MB_OK);
      Exit;
      end;
+        Local_info:=info;
         Local_info.email:=Self.Edit_Account.Text;
         Local_info.ton:=Self.Edit_tonName.Text;
         Local_info.path:=Self.Edit_GamePath.Text;
@@ -251,6 +256,7 @@ begin
         Local_info.datPath:=Self.CheckBox_datPatch.Checked;
         Local_info.elevated:=Self.CheckBox_ELEVATED.Checked;
         Local_info.mods:=nil;
+
         if not DataWalker.Modify(info.email,Local_info) then Exit;
 
       Self.Key:= Edit_tonName.Text;

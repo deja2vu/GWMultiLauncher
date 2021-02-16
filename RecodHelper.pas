@@ -53,7 +53,6 @@ var
 email:string;
 dwId:Cardinal;
 local_info:AccountInfo;
-action:TDWData;
 begin
      mutex.Enter;
      try
@@ -72,9 +71,7 @@ begin
                    local_info:=dataRecords[email];
                    local_info.status:= Runnning;
                    dataRecords.AddOrSetValue(email,local_info);
-                   action.Kind:= Word(UpdateStatus);
-                   action.value:=Word(Runnning);
-                   UIMessage.SendString(local_info.ton,action);
+                   UIMessage.Update(local_info.ton,Runnning);
               end
               else
               begin
@@ -92,9 +89,7 @@ begin
                    local_info:=dataRecords[email];
                    local_info.status:=Ready;
                    dataRecords.AddOrSetValue(email,local_info);
-                   action.Kind:= Word(UpdateStatus);
-                   action.value:=Word(Ready);
-                   UIMessage.SendString(local_info.ton,action);
+                   UIMessage.Update(local_info.ton,Ready);
               end
               else
               begin
@@ -131,7 +126,7 @@ try
            Exit;
          end;
          end;
-        JsonHelper.DelAccount(dataRecords[email].ton);
+        JsonHelper.DelAccount(email);
         dataRecords.Remove(email);
         Exit(True);
        end
@@ -205,7 +200,6 @@ var
 email:string;
 code:Cardinal;
 info:AccountInfo;
-action:TDWData;
 begin
  mutex.Enter;
  try
@@ -220,26 +214,20 @@ begin
                  begin
                      // not termainted
                      info.status:=InError;
-                     action.Kind:=word(UpdateStatus);
-                     action.value:=word(InError);
-                     UIMessage.SendString(info.ton,action);
+                     UIMessage.Update(info.ton,InError);
                  end
                  else
                  begin
                      //  termainted
                      info.status:=Deleted;
-                     action.Kind:=word(UpdateStatus);
-                     action.value:=word(Deleted);
-                     UIMessage.SendString(info.ton,action);
+                     UIMessage.Update(info.ton,Deleted);
                  end;
         end
         else
         begin
                       //  termainted
                      info.status:=Deleted;
-                     action.Kind:=word(UpdateStatus);
-                     action.value:=word(Deleted);
-                     UIMessage.SendString(info.ton,action);
+                     UIMessage.Update(info.ton,Deleted);
         end;
 
        end;
@@ -377,16 +365,16 @@ end;
 
 class function DataWalker.Modify(const orginKey:string;var info: AccountInfo):LongBool;
 var
-temp:AccountInfo;
+newKey:string;
 begin
 Result:=False;
 mutex.Enter;
 try
 if dataRecords.ContainsKey(orginKey) then
 begin
-   if JsonHelper.FindAcount(orginKey,temp) then
+   if JsonHelper.FindAcount(orginKey,info) then
    begin
-     if NOT (temp.status in [Ready]) then
+     if NOT (info.status in [Ready]) then
      begin
          UIMessage.RaiseError(Job_HadHung);
          Exit;
@@ -401,7 +389,7 @@ begin
      end
      else
      begin
-        JsonHelper.DelAccount(orginKey);
+       JsonHelper.DelAccount(orginKey);
        if JsonHelper.AddAccount(info) then
        begin
            dataRecords.Remove(orginKey);
