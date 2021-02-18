@@ -43,6 +43,7 @@ object TestForm: TTestForm
     Height = 25
     Caption = 'KillProcess'
     TabOrder = 3
+    OnClick = Button2Click
   end
   object Button3: TButton
     Left = 510

@@ -29,6 +29,7 @@ class function InitJob(const charName:string;out info:AccountInfo):LongBool;stat
 class procedure ReflushStatus;static;
 class procedure LoadJsonConfig;static;
 class procedure VerifyStatus;static;
+class procedure CloseClient(const charName:string);static;
 end;
 
 MyStatus = class
@@ -280,6 +281,19 @@ end;
 //    cds.lpData:=@Buffer[1];
 //    SendMessageW(MainUIHandle,WM_COPYDATA,MainUIHandle,Integer(@cds));
 //end;
+
+class procedure DataWalker.CloseClient(const charName: string);
+var
+info:AccountInfo;
+begin
+       mutex.Enter;
+       try
+            if DataWalker.GetStatus(charName,info) then
+            SendMessageW(info.wHandle,WM_CLOSE,0,0);
+       finally
+          mutex.Leave;
+       end;
+end;
 
 class constructor DataWalker.Create;
 begin

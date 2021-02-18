@@ -81,6 +81,10 @@ object MainForm: TMainForm
       Caption = #21551#21160#25152#26377#36134#21495
       OnClick = N6Click
     end
+    object N9: TMenuItem
+      Caption = #20851#38381#36873#20013#30340#23458#25143#31471
+      OnClick = N9Click
+    end
   end
   object CoolTrayIcon1: TCoolTrayIcon
     CycleInterval = 0

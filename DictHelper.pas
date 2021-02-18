@@ -17,6 +17,7 @@ AccountInfo = record
   email,psw,ton,path,ExArgs:string;
   datPath,elevated:LongBool;
   dwPid:Cardinal;
+  wHandle:Cardinal;
   mods:Pointer
 end;
 PAccountInfo = ^AccountInfo;

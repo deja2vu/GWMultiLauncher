@@ -21,6 +21,7 @@ type
     PopupMenu2: TPopupMenu;
     N7: TMenuItem;
     N8: TMenuItem;
+    N9: TMenuItem;
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure N2Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -35,6 +36,7 @@ type
     procedure FormShow(Sender: TObject);
     procedure N8Click(Sender: TObject);
     procedure N7Click(Sender: TObject);
+    procedure N9Click(Sender: TObject);
   private
     procedure OnError(var msg: TMessage); message MsgOnError;
   private
@@ -426,6 +428,19 @@ begin
   Application.Terminate;
 end;
 
+procedure TMainForm.N9Click(Sender: TObject);
+var
+I:Cardinal;
+begin
+  if Self.ListView1.SelCount = 0 then
+    Exit;
+  for I := 0 to Self.ListView1.Items.count - 1 do
+  begin
+  if Self.ListView1.Items[I].Selected then
+  DataWalker.CloseClient(Self.ListView1.Selected.Caption);
+  end;
+end;
+
 procedure TMainForm.OnError(var msg: TMessage);
 var
   ErrorMsg: ErrorType;
@@ -675,7 +690,7 @@ begin
             repeat
             if (GetTickCount - deadLock) < 1000 * 10 then
               begin
-                PostKeyExHWND(GwMainHandle, 80, [], False);
+               // PostKeyExHWND(GwMainHandle, 80, [], False);
                 if not Self.wait(20) then
                   Exit;
               end
@@ -696,7 +711,7 @@ begin
               Continue;
             end;
 
-
+            info.wHandle:= GwMainHandle;
             deadLock := GetTickCount;
             isTimeOut := False;
             repeat

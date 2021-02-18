@@ -17,6 +17,7 @@ type
     procedure Button1Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure Button4Click(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -47,6 +48,11 @@ begin
    ShowMessage(IntToStr(Integer(th.ThreadState)));
  end;
 end;
+end;
+
+procedure TTestForm.Button2Click(Sender: TObject);
+begin
+SendMessageW($002B0944,WM_CLOSE,0,0);
 end;
 
 procedure TTestForm.Button3Click(Sender: TObject);
