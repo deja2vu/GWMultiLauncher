@@ -140,7 +140,8 @@ begin
         reg.WriteString('Path', path);
       end;
     except
-      Exception.Create('perform registry failed');
+      ShowMessage('perform registry failed');
+      Exit;
     end;
 
     flags := Cardinal(KEEP_SUSPENDED);
@@ -161,11 +162,11 @@ begin
           CurrPid := LaunchClient(@path[1], @args[1], flags, hThread);
         end
         else
-          Abort;
+          Exception.Create('Do Run As Admin');
       except
-        MessageBoxW(0, 'Do Run As Admin', 'Error', 0);
         ResumeThread(hThread);
         CloseHandle(hThread);
+        Exit;
       end;
     end;
 
@@ -533,6 +534,10 @@ begin
                 begin
                   Self.AddAccount(PWideChar(cds.lpData), '', 'ÒÑ³ö´í');
                 end;
+              LogOut:
+                begin
+                  Self.AddAccount(PWideChar(cds.lpData), '', 'Î´µÇÂ¼');
+                end;
             else
               begin
                 { TODO : do something }
@@ -598,7 +603,8 @@ begin
           if scanTime > FScanTimeeScapedWithJobs then
           begin
             mutex.Leave;
-            reflushStatus;
+            DataWalker.reflushStatus;
+            //DataWalker.VerifyStatus;
             scanReset;
             Continue;
           end
@@ -618,7 +624,8 @@ begin
           mutex.Leave;
           if scanTime > FScanTimeeScapedWithOutJobs then
           begin
-            reflushStatus;
+            DataWalker.reflushStatus;
+            //DataWalker.VerifyStatus;
             scanReset;
             Continue;
           end;
@@ -639,7 +646,13 @@ begin
             launchDelayReSet;
             IsJobHung := False;
             Continue;
+          end
+          else
+          begin
+             info.dwPid:=CurrPid;
+             dataRecords.AddOrSetValue(info.email, info);
           end;
+
           deadLock := GetTickCount;
           isTimeOut := False;
 
