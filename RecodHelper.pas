@@ -50,7 +50,7 @@ MutexHelper,Windows,Messages,SysUtils,NtProcessHelper,MessageHelper;
 
 class procedure DataWalker.ReflushStatus;
 var
-email:string;
+email,ton:string;
 dwId:Cardinal;
 local_info:AccountInfo;
 begin
@@ -59,27 +59,39 @@ begin
      try
       GwMemoryHelper.ReSet;
       GwMemoryHelper.Capture;
-     if GwMemoryHelper.GetRunningStatus = 0 then Exit;
+      GwMemoryHelper.GetRunningStatus;
       for email in dataRecords.Keys do
       begin
-         if  GwMemoryHelper.IsLogIn(email,dwId) then
+
+         if  GwMemoryHelper.IsGwClientExist(email,dwId,ton) then
          begin
+               local_info:=dataRecords[email];
+               if ton = '' then
+               begin
+                if Not (local_info.status  In [LogOut]) then
+                begin
+                   local_info.status:=LogOut;
+                   local_info.dwPid:=dwId;
+                   dataRecords.AddOrSetValue(email,local_info);
+                   UIMessage.Update(local_info.ton,LogOut);
+                end;
 
-              if dataRecords[email].status In [Ready,InQueue,Launching] then
-              begin
-
-                   local_info:=dataRecords[email];
-                   local_info.status:= Runnning;
+               end
+               else
+               begin
+                if Not (local_info.status  In [JobStatus.Runnning]) then
+                begin
+                   local_info.status:=Runnning;
+                   local_info.dwPid:=dwId;
+                   local_info.ton:=ton;
                    dataRecords.AddOrSetValue(email,local_info);
                    UIMessage.Update(local_info.ton,Runnning);
-              end
-              else
-              begin
+                end;
+               end;
 
-              end;
 
          end
-         else
+         else       //process no exist
 
          begin
 
@@ -88,6 +100,7 @@ begin
 
                    local_info:=dataRecords[email];
                    local_info.status:=Ready;
+                   local_info.dwPid:=0;
                    dataRecords.AddOrSetValue(email,local_info);
                    UIMessage.Update(local_info.ton,Ready);
               end

@@ -157,17 +157,28 @@ handle_data = record
   thread_id:THandle;
 end;
 Phandle_data = ^handle_data;
-
 {$A-}
+  TQueryFullProcessImageNameW = function(AProcess: THANDLE; AFlags: DWORD;
+    AFileName: PWideChar; var ASize: DWORD): BOOL; stdcall;
+  TGetModuleFileNameExW = function(AProcess: THANDLE; AModule: HMODULE;
+    AFilename: PWideChar; ASize: DWORD): DWORD; stdcall;
 private
 class var
 mu32_DataSize:Cardinal;
 mp_Data:array of Byte;
+PsapiLib:HMODULE;
+GetModuleFileNameExW:TGetModuleFileNameExW;
+fullPath:array[0..MAX_PATH-1]of WideChar;
 private
 class function enum_windows_callback(handle:THandle;lParam:LPARAM):LongBool;stdcall;static;
 class function is_main_window(handle:Cardinal):LongBool;static;
 class function Find(const buffer:array of byte;const pattern:array of byte;const  mask: AnsiString;
   offset: Integer):Integer;static;
+class function GetProcessPath(hProcess:Cardinal):string;static;
+class function IsWindows200OrLater: Boolean;static;inline;
+class function IsWindowsVistaOrLater: Boolean;static;inline;
+class procedure DonePsapiLib;static;
+class procedure InitPsapiLib;static;
 protected
 class procedure ReSet;static;
 public
@@ -183,6 +194,7 @@ class function FindAllThreadsInProcess(const pk_Proc:PSYSTEM_PROCESS):PSYSTEM_TH
 class function KillProcess(dwPid:Cardinal):LongBool;static;
 class function MainWindowHandle(dwPid:Cardinal):Cardinal;static;
 class function find_main_window(const process_id:Cardinal):THandle;static;
+class function GetFileNameByProcessID(AProcessID: DWORD): UnicodeString;static;
 end;
 
 GwMemoryHelper =class(ProcessHelper)
@@ -196,7 +208,8 @@ private type
 TGwClient = record
  gwPid:Cardinal;
  email:WideString;
- path:WideString
+ path:WideString;
+ ton:WideString
 end;
 TGwClients = array of TGwClient;
     TPEB = record
@@ -222,13 +235,14 @@ class var
 GwClients:TGwClients;
 private
 class function GetProcessModuleBase(const hProcess:Cardinal):PByte;static;
-class function VeryiStrBuffer(const addr:PWideChar;const size:Cardinal):Cardinal;static;
+class function VeryiStrBuffer(const addr:PWideChar;const size:Cardinal):Cardinal;overload;static;
+class function VeryiStrBuffer(const addr: PAnsiChar;const size: Cardinal): Cardinal;overload;static;
 class function IsMainUIThread(const pk_Proc: ProcessHelper.PSYSTEM_PROCESS;Out tid:Cardinal):LongBool;static;
 class function enum_windows_callback(handle:THandle;lParam:LPARAM):LongBool;stdcall;static;
 public
 class procedure ReSet;static;
-class function GetRunningStatus:Cardinal;static;
-class function IsLogIn(const email: string;out Pid:Cardinal):LongBool;static;
+class function GetRunningStatus:Cardinal;static;// reflush GwClients
+class function IsGwClientExist(const email: string;out Pid:Cardinal;out ton:string):LongBool;static;
 class function IsSpecialDescription(const fullFilePath:string): LongBool;static;
 class function getCharName(const hProcess:Cardinal):string;static;
 class function getEmailName(const hProcess:Cardinal):string;static;
@@ -296,12 +310,22 @@ Assert(SizeOf(SYSTEM_PROCESS)= $B8,'SYSTEM_PROCESS:' + IntToHex(SizeOf(SYSTEM_PR
 {$ENDIF}
 mp_Data:=nil;
 mu32_DataSize:=1000;
+PsapiLib := 0;
 end;
 
 class destructor ProcessHelper.Destroy;
 begin
 if mp_Data <> nil then
 SetLength(mp_Data,0);
+DonePsapiLib;
+end;
+
+class procedure ProcessHelper.DonePsapiLib;
+begin
+  if PsapiLib = 0 then Exit;
+  FreeLibrary(PsapiLib);
+  PsapiLib := 0;
+  @GetModuleFileNameExW := nil;
 end;
 
 class function ProcessHelper.enum_windows_callback(handle: THandle;
@@ -406,6 +430,79 @@ begin
      Result:=data.window_handle;
 end;
 
+class function ProcessHelper.GetFileNameByProcessID(
+  AProcessID: DWORD): UnicodeString;
+const
+  PROCESS_QUERY_LIMITED_INFORMATION = $00001000; //Vista and above
+  PROCESS_NAME_NATIVE = $00000001;
+var
+  HProcess: THandle;
+  Lib: HMODULE;
+  QueryFullProcessImageNameW: TQueryFullProcessImageNameW;
+  S: DWORD;
+begin
+  if IsWindowsVistaOrLater then
+    begin
+      Lib := GetModuleHandle('kernel32.dll');
+      if Lib = 0 then RaiseLastOSError;
+      @QueryFullProcessImageNameW := GetProcAddress(Lib, 'QueryFullProcessImageNameW');
+      if not Assigned(QueryFullProcessImageNameW) then RaiseLastOSError;
+      HProcess := OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, AProcessID);
+      if HProcess = 0 then RaiseLastOSError;
+      try
+        S := MAX_PATH;
+        SetLength(Result, S + 1);
+        while not QueryFullProcessImageNameW(HProcess, 0, PWideChar(Result), S) and (GetLastError = ERROR_INSUFFICIENT_BUFFER) do
+          begin
+            S := S * 2;
+            SetLength(Result, S + 1);
+          end;
+        SetLength(Result, S);
+        Inc(S);
+        if not QueryFullProcessImageNameW(HProcess, 0, PWideChar(Result), S) then
+          Result:='';
+      finally
+        CloseHandle(HProcess);
+      end;
+    end
+  else
+    if IsWindows200OrLater then
+      begin
+        InitPsapiLib;
+        HProcess := OpenProcess(PROCESS_QUERY_INFORMATION or PROCESS_VM_READ, False, AProcessID);
+        if HProcess = 0 then RaiseLastOSError;
+        try
+          S := MAX_PATH;
+          SetLength(Result, S + 1);
+          if GetModuleFileNameExW(HProcess, 0, PWideChar(Result), S) = 0 then
+            RaiseLastOSError;
+          Result := PWideChar(Result);
+        finally
+          CloseHandle(HProcess);
+        end;
+      end;
+end;
+
+class function ProcessHelper.GetProcessPath(hProcess:Cardinal): string;
+begin
+
+end;
+
+class procedure ProcessHelper.InitPsapiLib;
+begin
+      if PsapiLib <> 0 then Exit;
+  PsapiLib := LoadLibrary('psapi.dll');
+  if PsapiLib = 0 then RaiseLastOSError;
+  @GetModuleFileNameExW := GetProcAddress(PsapiLib, 'GetModuleFileNameExW');
+  if not Assigned(GetModuleFileNameExW) then
+    try
+      RaiseLastOSError;
+    except
+      DonePsapiLib;
+      raise;
+    end;
+end;
+
 class function ProcessHelper.IsThreadSuspended(const pid,threadIndex:Cardinal): LongBool;
 var
 u32_Error:Cardinal;
@@ -421,6 +518,16 @@ begin
      Inc(pk_Thread,threadIndex);
      if pk_Thread = nil then  Exception.Create('pk_Thread = nil');
      Assert(ProcessHelper.IsThreadSuspended(pk_Thread,Result)= 0,'ERROR:IsThreadSuspended');
+end;
+
+class function ProcessHelper.IsWindows200OrLater: Boolean;
+begin
+   Result := Win32MajorVersion >= 5;
+end;
+
+class function ProcessHelper.IsWindowsVistaOrLater: Boolean;
+begin
+      Result := Win32MajorVersion >= 6;
 end;
 
 class function ProcessHelper.is_main_window(handle: Cardinal): LongBool;
@@ -469,6 +576,7 @@ retLen,I:Cardinal;
 ret:array[0..31]of WideChar;
 OpenedHandle:Cardinal;
 found:LongBool;
+strlen:Cardinal;
 begin
   Result:='';
   OpenedHandle:=0;
@@ -511,9 +619,10 @@ g_moduleBase,
 32*2,
 retLen
 ) then Exit;
-if (retLen > 0) and (VeryiStrBuffer(@ret[0],32)>0) then
+strlen:=VeryiStrBuffer(PWideChar(@ret[0]),32);
+if (retLen > 0) and (strlen>0) then
 begin
-  SetString(Result,PWideChar(@ret[0]),32);
+  SetString(Result,PWideChar(@ret[0]),strlen+1);
 end;
   finally
    SetLength(buffer,0);
@@ -529,9 +638,10 @@ var
 g_moduleBase:PByte;
 buffer:array of Byte;
 retLen,I:Cardinal;
-ret:array[0..31]of WideChar;
+ret:array[0..31]of AnsiChar;
 OpenedHandle:Cardinal;
 found:LongBool;
+strlen:Cardinal;
 begin
   Result:='';
   OpenedHandle:=0;
@@ -553,12 +663,13 @@ for I := 0 to $48D000 - 1 do
   begin
        if CompareMem(@buffer[I],@sig[0],SizeOf(sig)) then
        begin
-       g_moduleBase:=g_moduleBase + I - $42;
+       g_moduleBase:=g_moduleBase + I + $E;
        found:=True;
        Break;
        end;
   end;
  if not found then Exit;
+
  if not DynNtReadVirtualMemory(
 OpenedHandle,
 g_moduleBase,
@@ -567,16 +678,19 @@ g_moduleBase,
 retLen
 ) then Exit;
 
+
+
     if not DynNtReadVirtualMemory(
 OpenedHandle,
 g_moduleBase,
 @ret[0],
-32*2,
+32,
 retLen
 ) then Exit;
-if (retLen > 0) and (VeryiStrBuffer(@ret[0],32)>0) then
+strlen:=VeryiStrBuffer(PAnsiChar(@ret[0]),32);
+if (retLen > 0) and (strlen>0) then
 begin
-  SetString(Result,PWideChar(@ret[0]),32);
+  SetString(Result,PAnsiChar(@ret[0]),strlen+1);
 end;
   finally
    SetLength(buffer,0);
@@ -658,6 +772,7 @@ end;
 class function GwMemoryHelper.GetRunningStatus: Cardinal;
 var
 pk_Proc:PSYSTEM_PROCESS;
+path:string;
 begin
       Result:=0;
       if not Assigned(mp_Data) then  Exception.Create('m_Data = nil');
@@ -667,17 +782,22 @@ begin
       begin
        if pk_Proc.ImageName.Length <> 0 then
        begin
-         if GwMemoryHelper.IsSpecialDescription(pk_Proc.ImageName.Buffer) then
+      path:=ProcessHelper.GetFileNameByProcessID(Cardinal(pk_Proc.UniqueProcessId));
+       if  path <> ''  then
+       begin
+         if GwMemoryHelper.IsSpecialDescription(path) then
           begin
             if  GwMemoryHelper.getCharName(Cardinal(pk_Proc.UniqueProcessId)) <> '' then
             begin
               SetLength(GwMemoryHelper.GwClients,Result + 1);
               GwMemoryHelper.GwClients[Result].gwPid:=Cardinal(pk_Proc.UniqueProcessId);
-              GwMemoryHelper.GwClients[Result].path:=pk_Proc.ImageName.Buffer;
+              GwMemoryHelper.GwClients[Result].path:=path;
               GwMemoryHelper.GwClients[Result].email:= GwMemoryHelper.getEmailName(Cardinal(pk_Proc.UniqueProcessId));
+              GwMemoryHelper.GwClients[Result].ton:= GwMemoryHelper.getCharName(Cardinal(pk_Proc.UniqueProcessId));
               Inc(Result);
             end;
           end;
+       end;
        end;
        if pk_Proc.NextEntryOffset = 0 then  Break;
        pk_Proc:=PSYSTEM_PROCESS(pbyte(pk_Proc) + pk_Proc.NextEntryOffset);
@@ -716,18 +836,19 @@ Result:=ret <> 0;
   end;
 end;
 
-class function GwMemoryHelper.IsLogIn(const email: string;out Pid:Cardinal): LongBool;
+class function GwMemoryHelper.IsGwClientExist(const email: string;out Pid:Cardinal;out ton:string): LongBool;
 var
 I:Cardinal;
 begin
 Result:=False;
-if Assigned(GwMemoryHelper.GwClients) then
+if Length(GwMemoryHelper.GwClients) > 0 then
 begin
     for I := Low(GwMemoryHelper.GwClients) to High(GwMemoryHelper.GwClients) do
     begin
       if SameText(email,GwMemoryHelper.GwClients[I].email) then
       begin
       Pid:=GwMemoryHelper.GwClients[I].gwPid;
+      ton:=GwMemoryHelper.GwClients[I].ton;
       Exit(True);
       end;
     end;
@@ -788,7 +909,7 @@ class function GwMemoryHelper.IsSpecialDescription(const fullFilePath:string): L
 
     if VerQueryValueW(buf, PWideChar('\StringFileInfo\' + lang + '\FileDescription'), pntr, len){ and (@len <> nil)} then
       info.FileDescription := PWideChar(pntr);
-          if  CompareText(info.FileDescription,'Guild Wars Game Client') = 0 then
+          if  SameText(info.FileDescription,'Guild Wars Game Client') then
           begin
              Result:=True;
           end;
@@ -811,16 +932,43 @@ end;
 class function GwMemoryHelper.VeryiStrBuffer(const addr: PWideChar;
   const size: Cardinal): Cardinal;
   var
-  pScan:PWideChar;
+  pScan:PWORD;
   I:Cardinal;
 begin
       Result:=0;
       if size = 0 then Exit;
       if addr = nil then Exit;
-      pScan:=addr;
+      pScan:=PWord(addr);
       for I := 0 to size - 1 do
       begin
-           if pScan^ = WideChar(#0) then Exit(I+1);
+           if pScan^ = 0 then
+           begin
+           Result:=I-1;
+           Exit;
+           end;
+           Inc(pScan);
+      end;
+
+end;
+
+
+class function GwMemoryHelper.VeryiStrBuffer(const addr: PAnsiChar;
+  const size: Cardinal): Cardinal;
+var
+  pScan:PByte;
+  I:Cardinal;
+begin
+      Result:=0;
+      if size = 0 then Exit;
+      if addr = nil then Exit;
+      pScan:=Pbyte(addr);
+      for I := 0 to size - 1 do
+      begin
+           if pScan^ = 0 then
+           begin
+           Result:=I-1;
+           Exit;
+           end;
            Inc(pScan);
       end;
 

@@ -5,7 +5,7 @@ uses
 Generics.Collections;
 type
 {$Z2}
-JobStatus =(Ready,Runnning,InQueue,Launching,Deleted,UnKnow,InError);
+JobStatus =(Ready,Runnning,InQueue,Launching,Deleted,UnKnow,InError,LogOut);
 TJobStatus = set of JobStatus;
 {$Z-}
 TDWData = packed record

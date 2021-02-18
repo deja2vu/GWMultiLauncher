@@ -12,7 +12,11 @@ type
     Edit1: TEdit;
     Edit2: TEdit;
     Button2: TButton;
+    Button3: TButton;
+    Button4: TButton;
     procedure Button1Click(Sender: TObject);
+    procedure Button3Click(Sender: TObject);
+    procedure Button4Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -43,6 +47,25 @@ begin
    ShowMessage(IntToStr(Integer(th.ThreadState)));
  end;
 end;
+end;
+
+procedure TTestForm.Button3Click(Sender: TObject);
+var
+s:string;
+begin
+s:=ProcessHelper.GetFileNameByProcessID(600);
+ShowMessage(s);
+end;
+
+procedure TTestForm.Button4Click(Sender: TObject);
+var
+code:Cardinal;
+ret:LongBool;
+begin
+ret:=GetExitCodeProcess(4184,code);
+if ret then  ShowMessage('yes');
+
+Sleep(0);
 end;
 
 end.

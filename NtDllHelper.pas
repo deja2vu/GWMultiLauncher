@@ -119,6 +119,7 @@ SystemInformation:Pointer;
 SystemInformationLength:ULONG;
 ReturnLength:PULONG):LongBool;
 
+
 function EnableDebug(out hToken: THandle): Boolean;
 implementation
 uses

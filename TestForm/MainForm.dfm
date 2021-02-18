@@ -44,4 +44,22 @@ object TestForm: TTestForm
     Caption = 'KillProcess'
     TabOrder = 3
   end
+  object Button3: TButton
+    Left = 510
+    Top = 80
+    Width = 99
+    Height = 25
+    Caption = 'GetProcessPath'
+    TabOrder = 4
+    OnClick = Button3Click
+  end
+  object Button4: TButton
+    Left = 120
+    Top = 160
+    Width = 75
+    Height = 25
+    Caption = 'GetProcessExit'
+    TabOrder = 5
+    OnClick = Button4Click
+  end
 end

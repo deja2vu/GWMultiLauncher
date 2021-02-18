@@ -1,1 +1,12 @@
-[]
+[
+	{
+		"email": "ai92425@gmail.com",
+		"password": "13750991017",
+		"character": "Dump Monk",
+		"gwpath": "F:\\GuildWars\\Gw.exe",
+		"datfix": false,
+		"elevated": false,
+		"extraargs": "",
+		"mods": 0
+	}
+]
