@@ -52,6 +52,7 @@ type
 
 var
   MainForm: TMainForm;
+  AppMsg:Cardinal;
 procedure PostKeyExHWND(hWindow: HWnd; key: Word; const shift: TShiftState;
   specialkey: Boolean);
 
@@ -109,6 +110,7 @@ var
   hThread: DWORD;
   flags: Cardinal;
   ret: Cardinal;
+  NewPid:Cardinal;
 begin
   reg := TRegistry.Create;
   try
@@ -140,6 +142,12 @@ begin
         reg.OpenKey('\SOFTWARE\Wow6432Node\ArenaNet\Guild Wars', True);
         reg.WriteString('Src', path);
         reg.WriteString('Path', path);
+      end;
+      //"Games"="https://games.metaservices.microsoft.com/games/SGamesWebService.asmx"
+      reg.RootKey := HKEY_USERS;
+      if reg.OpenKey('\S-1-5-21-1236840849-325956646-3643811409-500\Software\Classes\Local Settings\Software\Microsoft\Windows\GameUX',False) then
+      begin
+       if reg.KeyExists('ServiceLocation') then reg.DeleteKey('ServiceLocation');
       end;
     except
       ShowMessage('perform registry failed');
@@ -258,7 +266,7 @@ begin
   DataWalker.LoadJsonConfig;
   for email in dataRecords.Keys do
   begin
-    Self.AddAccount(dataRecords[email].ton, '', '已就绪');
+   Self.AddAccount(dataRecords[email].ton, '', '待启动');
   end;
   DataWalker.reflushStatus;
 end;
@@ -280,8 +288,8 @@ end;
 
 procedure TMainForm.N1Click(Sender: TObject);
 begin
-  Self.ListView1.Clear;
-  LoadJsonConfig;
+  //Self.ListView1.Clear;
+  DataWalker.reflushStatus;
 end;
 
 procedure TMainForm.N2Click(Sender: TObject);
@@ -310,7 +318,11 @@ begin
       Exit;
     1:
       begin
-
+     if  DataWalker.IsPending(Self.ListView1.Selected.Caption) then
+     begin
+         UIMessage.RaiseError(Job_HadHung);
+         Exit;
+     end;
         m := TFModfiForm.Create(Self, Self.ListView1.Selected.Caption);
         try
           m.ShowModal;
@@ -445,7 +457,7 @@ procedure TMainForm.OnError(var msg: TMessage);
 var
   ErrorMsg: ErrorType;
 begin
-  ErrorMsg := ErrorType(msg.LParam);
+  ErrorMsg := ErrorType(TDWDATA(msg.LParam).value);
   case ErrorMsg of
     User_Duplicate_Name:
       begin
@@ -492,7 +504,7 @@ begin
       end;
     Job_HadHung:
       begin
-
+       ShowMessage('任务已挂起,无法修改');
       end;
     Process_Cannot_Closed:
       begin
@@ -507,9 +519,41 @@ begin
 end;
 
 procedure TMainForm.WndProc(var _message: TMessage);
+procedure SplitName(const split:string;out oldNmae:string;out newName:string);
+var
+I,J:Cardinal;
+tmpName:array of WideChar;
+begin
+        I:=1;
+        while split[I] <> WideChar(#0)  do
+        begin
+               if split[I] = '#' then
+               begin
+                   SetLength(tmpName,I-1);
+                   Move(split[1],tmpName[0],2*(I-1));
+                   SetString(oldNmae,PWideChar(@tmpName[0]),I-1);
+                   Break;
+               end;
+               Inc(I);
+        end;
+        Inc(I);
+        J:=I;
+        while split[I] <> WideChar(#0)  do
+        begin
+               Inc(I);
+        end;
+        if I>J then
+        begin
+                   SetLength(tmpName,I-J);
+                   Move(split[J],tmpName[0],2*(I-J));
+                   SetString(newName,PWideChar(@tmpName[0]),I-J);
+        end;
+
+end;
 var
   cds: PCopyDataStruct;
   action: TDWData;
+  orignName,NewName:string;
 begin
   if _message.msg = WM_COPYDATA then
   begin
@@ -553,6 +597,15 @@ begin
                 begin
                   Self.AddAccount(PWideChar(cds.lpData), '', '未登录');
                 end;
+              Join:
+              begin
+                 Self.AddAccount(PWideChar(cds.lpData), '', '待启动');
+              end;
+              TonChanged:
+              begin
+                  SplitName(PWideChar(cds.lpData),orignName,NewName);
+                  Self.AddAccount(orignName, NewName, '');
+              end
             else
               begin
                 { TODO : do something }
@@ -570,6 +623,11 @@ begin
     begin
       inherited WndProc(_message);
     end;
+  end
+else  if _message.Msg = AppMsg then
+  begin
+    if not (Application.MainForm.Visible) then
+    Self.CoolTrayIcon1.ShowMainForm;
   end
   else
     inherited WndProc(_message);

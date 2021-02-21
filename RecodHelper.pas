@@ -30,6 +30,7 @@ class procedure ReflushStatus;static;
 class procedure LoadJsonConfig;static;
 class procedure VerifyStatus;static;
 class procedure CloseClient(const charName:string);static;
+class function IsPending(const tonName:string):LongBool;static;
 end;
 
 MyStatus = class
@@ -52,7 +53,7 @@ MutexHelper,Windows,Messages,SysUtils,NtProcessHelper,MessageHelper;
 class procedure DataWalker.ReflushStatus;
 var
 email,ton:string;
-dwId:Cardinal;
+dwId,whandle:Cardinal;
 local_info:AccountInfo;
 begin
      mutex.Enter;
@@ -64,9 +65,10 @@ begin
       for email in dataRecords.Keys do
       begin
 
-         if  GwMemoryHelper.IsGwClientExist(email,dwId,ton) then
+         if  GwMemoryHelper.IsGwClientExist(email,dwId,whandle,ton) then
          begin
                local_info:=dataRecords[email];
+               local_info.wHandle:=whandle;
                if ton = '' then
                begin
                 if Not (local_info.status  In [LogOut]) then
@@ -80,6 +82,8 @@ begin
                end
                else
                begin
+               if  SameText(local_info.ton,ton) then
+               begin
                 if Not (local_info.status  In [JobStatus.Runnning]) then
                 begin
                    local_info.status:=Runnning;
@@ -88,6 +92,15 @@ begin
                    dataRecords.AddOrSetValue(email,local_info);
                    UIMessage.Update(local_info.ton,Runnning);
                 end;
+               end
+                 else
+                  begin
+                   UIMessage.Update(local_info.ton + '#' + ton,TonChanged);
+                   //local_info.status:=Runnning;
+                   local_info.dwPid:=dwId;
+                   local_info.ton:=ton;
+                   dataRecords.AddOrSetValue(email,local_info);
+                  end;
                end;
 
 
@@ -382,6 +395,26 @@ begin
         finally
         mutex.Leave;
         end;
+end;
+
+class function DataWalker.IsPending(const tonName: string): LongBool;
+var
+info:AccountInfo;
+key:string;
+begin
+mutex.Enter;
+try
+   for key in dataRecords.Keys do
+  begin
+     info:=dataRecords[key];
+     if SameText(tonName,info.ton) then
+   Exit(info.status in [Runnning,InQueue,Launching,Deleted,UnKnow,InError,Join,TonChanged]);
+
+  end;
+   Result:=False;
+finally
+  mutex.Leave;
+end;
 end;
 
 class procedure DataWalker.LoadJsonConfig;

@@ -13,3 +13,5 @@ TestForm/__history/
 __history/
 CoolTrayIcon
 Logger.log
+*.json
+

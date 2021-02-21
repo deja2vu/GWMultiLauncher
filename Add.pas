@@ -106,7 +106,7 @@ begin
    reg:=TPerlRegEx.Create;
     try
     reg.Subject:=path;
-    reg.RegEx:='^[A-Za-z]{1}:\\([^\\/\:\*\"\<\>\|\?]|[\x{4e00}-\x{9fa5}])*\\([^\\/\:\*\"\<\>\|\?]|[\x{4e00}-\x{9fa5}])+$';
+    reg.RegEx:='^[A-Za-z]:(\\([\x{4e00}-\x{9fa5}]|[^\\/\:\*\"\<\>\|\?])+)+$';
     Result:=reg.Match;
     if not Result then   ShowMessage('路径格式不对');
     finally

@@ -235,6 +235,7 @@ begin
     begin
       if C.Items[I].Typ = jdtObject then
       begin
+        if dataRecords.ContainsKey(info.email) then  Continue;
         info.email:=C.Items[I].ObjectValue.S['email'];
         info.psw:=C.Items[I].ObjectValue.S['password'];
         info.ton:=C.Items[I].ObjectValue.S['character'];

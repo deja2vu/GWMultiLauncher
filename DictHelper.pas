@@ -5,7 +5,7 @@ uses
 Generics.Collections;
 type
 {$Z2}
-JobStatus =(Ready,Runnning,InQueue,Launching,Deleted,UnKnow,InError,LogOut);
+JobStatus =(Ready,Runnning,InQueue,Launching,Deleted,UnKnow,InError,LogOut,Join,TonChanged);
 TJobStatus = set of JobStatus;
 {$Z-}
 TDWData = packed record
@@ -13,7 +13,7 @@ Kind:Word;
 value:Word;
 end;
 AccountInfo = record
-  status:JobStatus;//就绪,运行中,排队中,启动中,为知,错误
+  status:JobStatus;//就绪,运行中,排队中,启动中,为知,错误,登出
   email,psw,ton,path,ExArgs:string;
   datPath,elevated:LongBool;
   dwPid:Cardinal;

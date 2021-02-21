@@ -179,6 +179,7 @@ class function IsWindows200OrLater: Boolean;static;inline;
 class function IsWindowsVistaOrLater: Boolean;static;inline;
 class procedure DonePsapiLib;static;
 class procedure InitPsapiLib;static;
+class procedure LogError;static;
 protected
 class procedure ReSet;static;
 public
@@ -195,6 +196,7 @@ class function KillProcess(dwPid:Cardinal):LongBool;static;
 class function MainWindowHandle(dwPid:Cardinal):Cardinal;static;
 class function find_main_window(const process_id:Cardinal):THandle;static;
 class function GetFileNameByProcessID(AProcessID: DWORD): UnicodeString;static;
+class function IsInvaidPending(AProcessID: DWORD):LongBool;static;
 end;
 
 GwMemoryHelper =class(ProcessHelper)
@@ -207,6 +209,7 @@ private type
   end;
 TGwClient = record
  gwPid:Cardinal;
+ gwHandle:Cardinal;
  email:WideString;
  path:WideString;
  ton:WideString
@@ -242,7 +245,7 @@ class function enum_windows_callback(handle:THandle;lParam:LPARAM):LongBool;stdc
 public
 class procedure ReSet;static;
 class function GetRunningStatus:Cardinal;static;// reflush GwClients
-class function IsGwClientExist(const email: string;out Pid:Cardinal;out ton:string):LongBool;static;
+class function IsGwClientExist(const email: string;out Pid:Cardinal;out whandle:Cardinal;out ton:string):LongBool;static;
 class function IsSpecialDescription(const fullFilePath:string): LongBool;static;
 class function getCharName(const hProcess:Cardinal):string;static;
 class function getEmailName(const hProcess:Cardinal):string;static;
@@ -252,6 +255,8 @@ class function IsInGame(const hProcess:Cardinal):LongBool;static;
 end;
 
 implementation
+uses
+Logger;
 
 function NtQuerySystemInformation(
 SystemInformationClass:Cardinal;
@@ -446,9 +451,9 @@ begin
       Lib := GetModuleHandle('kernel32.dll');
       if Lib = 0 then RaiseLastOSError;
       @QueryFullProcessImageNameW := GetProcAddress(Lib, 'QueryFullProcessImageNameW');
-      if not Assigned(QueryFullProcessImageNameW) then RaiseLastOSError;
+      if not Assigned(QueryFullProcessImageNameW) then ProcessHelper.LogError;
       HProcess := OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, AProcessID);
-      if HProcess = 0 then RaiseLastOSError;
+      if HProcess = 0 then ProcessHelper.LogError;
       try
         S := MAX_PATH;
         SetLength(Result, S + 1);
@@ -470,12 +475,12 @@ begin
       begin
         InitPsapiLib;
         HProcess := OpenProcess(PROCESS_QUERY_INFORMATION or PROCESS_VM_READ, False, AProcessID);
-        if HProcess = 0 then RaiseLastOSError;
+        if HProcess = 0 then ProcessHelper.LogError;
         try
           S := MAX_PATH;
           SetLength(Result, S + 1);
           if GetModuleFileNameExW(HProcess, 0, PWideChar(Result), S) = 0 then
-            RaiseLastOSError;
+            ProcessHelper.LogError;
           Result := PWideChar(Result);
         finally
           CloseHandle(HProcess);
@@ -501,6 +506,15 @@ begin
       DonePsapiLib;
       raise;
     end;
+end;
+
+class function ProcessHelper.IsInvaidPending(AProcessID: DWORD): LongBool;
+var
+pk_Proc:PSYSTEM_PROCESS;
+begin
+        pk_Proc:=ProcessHelper.FindProcessByPid(AProcessID);
+     if pk_Proc = nil then Exception.Create('proc = nil');
+     Result:=pk_Proc.ThreadCount <= 1;
 end;
 
 class function ProcessHelper.IsThreadSuspended(const pid,threadIndex:Cardinal): LongBool;
@@ -543,6 +557,18 @@ begin
         Result:=DynNtOpenProcess(@OpenedToken,PROCESS_TERMINATE,dwPid);
         if Result then
         Result:=TerminateProcess(OpenedToken,ret);
+end;
+
+class procedure ProcessHelper.LogError;
+var
+error:Cardinal;
+begin
+  error:=GetLastError;
+  if error <> 0 then
+  begin
+  Printf(error);
+  Abort;
+  end;
 end;
 
 class function ProcessHelper.MainWindowHandle(dwPid: Cardinal): Cardinal;
@@ -791,6 +817,7 @@ begin
             begin
               SetLength(GwMemoryHelper.GwClients,Result + 1);
               GwMemoryHelper.GwClients[Result].gwPid:=Cardinal(pk_Proc.UniqueProcessId);
+              GwMemoryHelper.GwClients[Result].gwHandle:=GwMemoryHelper.FindGwWinHandle(Cardinal(pk_Proc.UniqueProcessId));
               GwMemoryHelper.GwClients[Result].path:=path;
               GwMemoryHelper.GwClients[Result].email:= GwMemoryHelper.getEmailName(Cardinal(pk_Proc.UniqueProcessId));
               GwMemoryHelper.GwClients[Result].ton:= GwMemoryHelper.getCharName(Cardinal(pk_Proc.UniqueProcessId));
@@ -836,7 +863,7 @@ Result:=ret <> 0;
   end;
 end;
 
-class function GwMemoryHelper.IsGwClientExist(const email: string;out Pid:Cardinal;out ton:string): LongBool;
+class function GwMemoryHelper.IsGwClientExist(const email: string;out Pid:Cardinal;out whandle:Cardinal;out ton:string): LongBool;
 var
 I:Cardinal;
 begin
@@ -847,6 +874,7 @@ begin
     begin
       if SameText(email,GwMemoryHelper.GwClients[I].email) then
       begin
+      whandle:=GwMemoryHelper.GwClients[I].gwHandle;
       Pid:=GwMemoryHelper.GwClients[I].gwPid;
       ton:=GwMemoryHelper.GwClients[I].ton;
       Exit(True);

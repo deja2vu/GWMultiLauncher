@@ -45,14 +45,14 @@ begin
  th:=GwMemoryHelper.FindThreadByTid(pro,StrToInt(Edit2.text));
  if th<> nil then
  begin
-   ShowMessage(IntToStr(Integer(th.ThreadState)));
+   ShowMessage(IntToStr(Integer(pro.ThreadCount)));
  end;
 end;
 end;
 
 procedure TTestForm.Button2Click(Sender: TObject);
 begin
-SendMessageW($002B0944,WM_CLOSE,0,0);
+ProcessHelper.KillProcess(4728);
 end;
 
 procedure TTestForm.Button3Click(Sender: TObject);
