@@ -147,7 +147,11 @@ begin
       reg.RootKey := HKEY_USERS;
       if reg.OpenKey('\S-1-5-21-1236840849-325956646-3643811409-500\Software\Classes\Local Settings\Software\Microsoft\Windows\GameUX',False) then
       begin
-       if reg.KeyExists('ServiceLocation') then reg.DeleteKey('ServiceLocation');
+       if reg.KeyExists('ServiceLocation') then
+begin
+if reg.OpenKey('\S-1-5-21-1236840849-325956646-3643811409-500\Software\Classes\Local Settings\Software\Microsoft\Windows\GameUX\ServiceLocation',False)  then
+   reg.WriteString('Games','');
+end;
       end;
     except
       ShowMessage('perform registry failed');
@@ -277,6 +281,7 @@ var
 begin
   mutex.Enter;
   try
+    if Self.ListView1.SelCount = 0 then  Exit;
     if DataWalker.InitJob(Self.ListView1.Selected.Caption, info) then
     begin
       UIMessage.Update(Self.ListView1.Selected.Caption, InQueue);
