@@ -87,6 +87,7 @@ object FAddForm: TFAddForm
       Width = 177
       Height = 21
       TabOrder = 1
+      TextHint = #35831#36755#20837#36134#21495#30340#21517#31216
     end
     object StaticText2: TStaticText
       Left = 16
@@ -124,6 +125,7 @@ object FAddForm: TFAddForm
       Width = 177
       Height = 21
       TabOrder = 5
+      TextHint = #35831#36755#20837#35282#33394#21517
     end
     object StaticText4: TStaticText
       Left = 16
@@ -139,6 +141,7 @@ object FAddForm: TFAddForm
       Width = 145
       Height = 21
       TabOrder = 7
+      TextHint = #35831#36755#20837#28608#25112#23458#25143#31471#30340#36335#24452
     end
     object StaticText5: TStaticText
       Left = 16
@@ -160,6 +163,7 @@ object FAddForm: TFAddForm
       Top = 215
       Width = 97
       Height = 17
+      Hint = #20849#20139#28608#25112#30340'dat'#25991#20214
       Caption = #20849#20139'.dat'#25991#20214
       TabOrder = 10
       OnClick = CheckBox_datPatchClick
@@ -169,6 +173,7 @@ object FAddForm: TFAddForm
       Top = 246
       Width = 97
       Height = 17
+      Hint = #21551#29992#31649#29702#21592#26435#38480
       Caption = #31649#29702#21592#26435#38480
       TabOrder = 11
     end

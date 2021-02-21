@@ -122,7 +122,7 @@ begin
    reg:=TPerlRegEx.Create;
     try
     reg.Subject:=userName;
-    reg.RegEx:='^[a-z0-9A-Z]+@[a-z0-9A-Z]+\.[a-zA-Z]+$';
+    reg.RegEx:='^[a-z0-9A-Z]+@[a-z0-9A-Z.]+$';
     Result:=reg.Match;
     if not Result then   ShowMessage('邮箱格式不对');
     finally
