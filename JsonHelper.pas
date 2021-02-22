@@ -204,6 +204,7 @@ begin
       ret := FindJsonObject(C,'email',info.email);
       if ret <> nil then
       begin
+      ret.S['character']:=info.ton;
       ret.S['gwpath'] :=info.path;
       ret.B['datfix']:=info.datPath;
       ret.B['elevated']:=info.elevated;

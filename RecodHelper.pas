@@ -100,6 +100,8 @@ begin
                    local_info.dwPid:=dwId;
                    local_info.ton:=ton;
                    dataRecords.AddOrSetValue(email,local_info);
+                   if not ModifyAccount(local_info) then Exception.Create('ModifyAccoun Failed');
+
                   end;
                end;
 
