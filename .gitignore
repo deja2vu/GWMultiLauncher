@@ -15,3 +15,5 @@ CoolTrayIcon
 Logger.log
 *.json
 
+Logger/Log.bpl
+Logger/Log.dpk
